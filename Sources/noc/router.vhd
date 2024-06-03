@@ -38,7 +38,7 @@ use ieee.std_logic_arith.all;
 entity router is
   generic(
     flow_control : std_logic                    := '1';  --0 = AN; 1 = CB
-    width        : integer                      := 34;
+    width        : integer                      := 32;
     depth        : integer                      := 4;
     ports        : std_logic_vector(4 downto 0) := "11111"
     );
