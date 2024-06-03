@@ -3,29 +3,29 @@
 module TestBench();
 	     
      //DUT parameters
-     parameter WORD_WIDTH=34;
+     parameter WORD_WIDTH=32;
      parameter OUTPORTS = 5;
      logic reset,clk;
      logic [OUTPORTS-1:0][WORD_WIDTH-1:0] DataIn,DataOut;
      logic [OUTPORTS-1:0] DataVoidIn,stop_in,DataVoidOut,stop_out;
      int Counter=2;
      logic [0:6][WORD_WIDTH-1:0] dati = '{ 
-        {{2'b10},{6'd0},{3'd3},{3'd2},{15'd0},{5'b00001}} , 
+        {{2'b10},{6'd0},{3'd3},{3'd2},{13'd0},{5'b00001}} , 
         {{2'b00}, {32'd1}},
         {{2'b00}, {32'd2}},
         {{2'b00}, {32'd3}},
         {{2'b00}, {32'd4}},
         {{2'b00}, {32'd5}},
-        {{2'b01},{18'd0},{3'd2},{3'd2},{6'd0}, {2'b00}} };
+        {{2'b01},{16'd0},{3'd2},{3'd2},{6'd0}, {2'b00}} };
      
      initial begin
      	reset=0;
         clk=0;
-        DataIn[0]=34'd0;
-        DataIn[1]=34'd0;
-        DataIn[2]=34'd0;
-        DataIn[3]=34'd0;
-        DataIn[4]=34'd0;
+        DataIn[0]={WORD_WIDTH{1'd0}};
+        DataIn[1]={WORD_WIDTH{1'd0}};
+        DataIn[2]={WORD_WIDTH{1'd0}};
+        DataIn[3]={WORD_WIDTH{1'd0}};
+        DataIn[4]={WORD_WIDTH{1'd0}};
         DataVoidIn=5'h1f;
         #100
         reset=1;

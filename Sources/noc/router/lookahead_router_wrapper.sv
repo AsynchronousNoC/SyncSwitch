@@ -54,8 +54,8 @@ module lookahead_router_wrapper
        .data_w_out,
        .data_e_out,
        .data_p_out,
-       .data_void_out,
-       .stop_in
+       .data_void_outBUFFER(data_void_out),
+       .stop_inBUFFER(stop_in)
        );
 
 endmodule

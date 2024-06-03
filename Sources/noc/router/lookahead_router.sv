@@ -76,8 +76,8 @@ module lookahead_router
    output logic [PortWidth-1:0] data_w_out,
    output logic [PortWidth-1:0] data_e_out,
    output logic [PortWidth-1:0] data_p_out,
-   output logic [4:0] data_void_out,
-   input  logic [4:0] stop_in
+   output logic [4:0] data_void_outBUFFER,
+   input  logic [4:0] stop_inBUFFER
    );
 
   localparam bit FifoBypassEnable = FlowControl == noc::kFlowControlAckNack;
@@ -104,6 +104,7 @@ module lookahead_router
     kPayloadFlits = 1'b1
   } state_t;
 
+  
   state_t [4:0] state;
   state_t [4:0] new_state;
 
@@ -138,6 +139,7 @@ module lookahead_router
   logic [4:0] wr_fifo;
 
   noc::credits_t credits;
+  
 
   logic [4:0] forwarding_tail;
   logic [4:0] forwarding_head;
@@ -150,23 +152,64 @@ module lookahead_router
   assign data_in[noc::kEastPort] = data_e_in;
   assign data_in[noc::kLocalPort] = data_p_in;
 
+  logic [4:0] data_void_out,stop_in;
+  logic [4:0] empty_out, full_out,rdreqBUFFER;
+  flit_t [4:0] DataOutBUFFER;
+  logic OUTPUTBUFFER=1'b1;
+  noc::credits_t creditsBuffer;
   // This router has a single cycle delay.
   // When using ready-valid protocol, the register is placed at the output; for credit-based,
   // the register is the input FIFO (not bypassable) and the output of the crossbar is not
   // registered.
-  assign data_n_out = FifoBypassEnable ? last_flit[noc::kNorthPort] :
+  assign data_n_out = OUTPUTBUFFER ? DataOutBUFFER[noc::kNorthPort] : FifoBypassEnable ? last_flit[noc::kNorthPort] :
                       data_out_crossbar[noc::kNorthPort];
-  assign data_s_out = FifoBypassEnable ? last_flit[noc::kSouthPort] :
+  assign data_s_out = OUTPUTBUFFER ? DataOutBUFFER[noc::kSouthPort] :FifoBypassEnable ? last_flit[noc::kSouthPort] :
                       data_out_crossbar[noc::kSouthPort];
-  assign data_w_out = FifoBypassEnable ? last_flit[noc::kWestPort]  :
+  assign data_w_out = OUTPUTBUFFER ? DataOutBUFFER[noc::kWestPort] :FifoBypassEnable ? last_flit[noc::kWestPort]  :
                       data_out_crossbar[noc::kWestPort];
-  assign data_e_out = FifoBypassEnable ? last_flit[noc::kEastPort]  :
+  assign data_e_out = OUTPUTBUFFER ? DataOutBUFFER[noc::kEastPort] :FifoBypassEnable ? last_flit[noc::kEastPort]  :
                       data_out_crossbar[noc::kEastPort];
-  assign data_p_out = FifoBypassEnable ? last_flit[noc::kLocalPort] :
+  assign data_p_out = OUTPUTBUFFER ? DataOutBUFFER[noc::kLocalPort] :FifoBypassEnable ? last_flit[noc::kLocalPort] :
                       data_out_crossbar[noc::kLocalPort];
 
   genvar g_i;
-
+  //OUTPUT FIFO
+  
+  for (g_i = 0; g_i < 5; g_i++) begin : gen_output_fifo
+    assign stop_in[g_i]=~rdreqBUFFER[g_i];
+    assign data_void_outBUFFER[g_i]=~rdreqBUFFER[g_i];
+    assign rdreqBUFFER[g_i]=creditsBuffer[g_i]== 1'b0  ||  empty_out[g_i]? 1'b0 : 1'b1;
+    always_ff @(posedge clk) begin
+          if (rst) begin
+            creditsBuffer[g_i] = noc::PortQueueDepth;
+          end else begin
+            if (~data_void_outBUFFER[g_i]) begin
+              creditsBuffer[g_i] <= creditsBuffer[g_i] - stop_inBUFFER[g_i];
+            end else begin
+              if(creditsBuffer[g_i]!=noc::PortQueueDepth)
+                creditsBuffer[g_i] <= creditsBuffer[g_i] + ~stop_inBUFFER[g_i];
+            end
+          end
+        end
+        
+    router_fifo
+        #(
+          .BypassEnable(FifoBypassEnable),
+          .Depth(noc::PortQueueDepth),
+          .Width(PortWidth)
+          )
+      output_queue (
+            .clk,
+            .rst,
+            .rdreq(rdreqBUFFER[g_i]),
+            .wrreq(~data_void_out[g_i]),
+            .data_in(data_out_crossbar[g_i]),
+            .empty(empty_out[g_i]),
+            .full(full_out[g_i]),
+            .data_out(DataOutBUFFER[g_i])
+            );
+  end
+  
   //////////////////////////////////////////////////////////////////////////////
   // Input FIFOs and look-ahead routing
   //////////////////////////////////////////////////////////////////////////////

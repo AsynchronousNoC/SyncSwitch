@@ -38,7 +38,7 @@ use ieee.std_logic_arith.all;
 entity router is
   generic(
     flow_control : std_logic                    := '1';  --0 = AN; 1 = CB
-    width        : integer                      := 34;
+    width        : integer                      := 32;
     depth        : integer                      := 4;
     ports        : std_logic_vector(4 downto 0) := "11111"
     );
@@ -103,24 +103,24 @@ architecture behavior of router is
       data_void_out : out std_logic_vector(4 downto 0);
       stop_out      : out std_logic_vector(4 downto 0));
   end component;
-    signal data_n_out_reg : std_logic_vector(width-1 downto 0);
-    signal data_s_out_reg : std_logic_vector(width-1 downto 0);
-    signal data_w_out_reg : std_logic_vector(width-1 downto 0);
-    signal data_e_out_reg : std_logic_vector(width-1 downto 0);
-    signal data_p_out_reg : std_logic_vector(width-1 downto 0);
+    --signal data_n_out_reg : std_logic_vector(width-1 downto 0);
+    --signal data_s_out_reg : std_logic_vector(width-1 downto 0);
+    --signal data_w_out_reg : std_logic_vector(width-1 downto 0);
+    --signal data_e_out_reg : std_logic_vector(width-1 downto 0);
+    --signal data_p_out_reg : std_logic_vector(width-1 downto 0);
 begin
 
-    process (clk)
-    begin
-        if(rising_edge(clk)) then
-            data_n_out<=data_n_out_reg;
-            data_s_out<=data_s_out_reg;
-            data_w_out<=data_w_out_reg;
-            data_e_out<=data_e_out_reg;
-            data_p_out<=data_p_out_reg;
-        
-        end if;
-    end process;
+    --process (clk)
+    --begin
+    --    if(rising_edge(clk)) then
+    --        data_n_out<=data_n_out_reg;
+    --        data_s_out<=data_s_out_reg;
+    --        data_w_out<=data_w_out_reg;
+    --       data_e_out<=data_e_out_reg;
+    --        data_p_out<=data_p_out_reg;
+    --    
+    --    end if;
+    --end process;
   lookahead_router_wrapper_i: lookahead_router_wrapper
     generic map (
       FlowControl => flow_control,
@@ -138,11 +138,11 @@ begin
       data_p_in     => data_p_in,
       data_void_in  => data_void_in,
       stop_in       => stop_in,
-      data_n_out    => data_n_out_reg,
-      data_s_out    => data_s_out_reg,
-      data_w_out    => data_w_out_reg,
-      data_e_out    => data_e_out_reg,
-      data_p_out    => data_p_out_reg,
+      data_n_out    => data_n_out,
+      data_s_out    => data_s_out,
+      data_w_out    => data_w_out,
+      data_e_out    => data_e_out,
+      data_p_out    => data_p_out,
       data_void_out => data_void_out,
       stop_out      => stop_out);
 
