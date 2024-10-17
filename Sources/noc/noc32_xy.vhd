@@ -25,15 +25,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
-
-use work.monitor_pkg.all;
-use work.nocpackage.all;
+use work.MinimalPack.all;
 
 entity noc32_xy is
   generic (
-    XLEN      : integer;
-    YLEN      : integer;
-    TILES_NUM : integer);
+    XLEN      : integer := 4;
+    YLEN      : integer := 4;
+    TILES_NUM : integer := 16);
   port (
     clk           : in  std_logic;
     rst           : in  std_logic;
@@ -42,9 +40,7 @@ entity noc32_xy is
     stop_in       : in  std_logic_vector(TILES_NUM-1 downto 0);
     output_port   : out misc_noc_flit_vector(TILES_NUM-1 downto 0);
     data_void_out : out std_logic_vector(TILES_NUM-1 downto 0);
-    stop_out      : out std_logic_vector(TILES_NUM-1 downto 0);
-    -- Monitor output. Can be left unconnected
-    mon_noc       : out monitor_noc_vector(0 to TILES_NUM-1)
+    stop_out      : out std_logic_vector(TILES_NUM-1 downto 0)
     );
 
 end noc32_xy;
@@ -129,33 +125,38 @@ architecture mesh of noc32_xy is
   constant localx       : local_vec := set_tile_x(XLEN, YLEN, 3);
   constant localy       : local_vec := set_tile_y(XLEN, YLEN, 3);
 
-  component router
-    generic (
-      flow_control : integer;
-      width        : integer;
-      depth        : integer;
-      ports        : std_logic_vector(4 downto 0);
-      localx       : std_logic_vector(2 downto 0);
-      localy       : std_logic_vector(2 downto 0));
+component router is
+  generic(
+    flow_control : std_logic                    := '1';  --0 = AN; 1 = CB
+    width        : integer                      := 32;
+    depth        : integer                      := 4;
+    ports        : std_logic_vector(4 downto 0) := "11111"
+    );
+  port(
+    clk : in std_logic;
+    rst : in std_logic;
 
-    port (
-      clk           : in  std_logic;
-      rst           : in  std_logic;
-      data_n_in     : in  std_logic_vector(width-1 downto 0);
-      data_s_in     : in  std_logic_vector(width-1 downto 0);
-      data_w_in     : in  std_logic_vector(width-1 downto 0);
-      data_e_in     : in  std_logic_vector(width-1 downto 0);
-      data_p_in     : in  std_logic_vector(width-1 downto 0);
-      data_void_in  : in  std_logic_vector(4 downto 0);
-      stop_in       : in  std_logic_vector(4 downto 0);
-      data_n_out    : out std_logic_vector(width-1 downto 0);
-      data_s_out    : out std_logic_vector(width-1 downto 0);
-      data_w_out    : out std_logic_vector(width-1 downto 0);
-      data_e_out    : out std_logic_vector(width-1 downto 0);
-      data_p_out    : out std_logic_vector(width-1 downto 0);
-      data_void_out : out std_logic_vector(4 downto 0);
-      stop_out      : out std_logic_vector(4 downto 0));
-  end component;
+    CONST_localx : in std_logic_vector(2 downto 0);
+    CONST_localy : in std_logic_vector(2 downto 0);
+
+    data_n_in : in std_logic_vector(width-1 downto 0);
+    data_s_in : in std_logic_vector(width-1 downto 0);
+    data_w_in : in std_logic_vector(width-1 downto 0);
+    data_e_in : in std_logic_vector(width-1 downto 0);
+    data_p_in : in std_logic_vector(width-1 downto 0);
+
+    data_void_in : in std_logic_vector(4 downto 0);
+    stop_in      : in std_logic_vector(4 downto 0);
+
+    data_n_out : out std_logic_vector(width-1 downto 0);
+    data_s_out : out std_logic_vector(width-1 downto 0);
+    data_w_out : out std_logic_vector(width-1 downto 0);
+    data_e_out : out std_logic_vector(width-1 downto 0);
+    data_p_out : out std_logic_vector(width-1 downto 0);
+
+    data_void_out : out std_logic_vector(4 downto 0);
+    stop_out      : out std_logic_vector(4 downto 0));
+end component;
 
   signal data_n_in     : misc_noc_flit_vector(TILES_NUM-1 downto 0);
   signal data_s_in     : misc_noc_flit_vector(TILES_NUM-1 downto 0);
@@ -250,12 +251,11 @@ begin  -- mesh
 
     router_ij: router
         generic map (
-          flow_control => FLOW_CONTROL,
-          width        => MISC_NOC_FLIT_SIZE,
-          depth        => ROUTER_DEPTH,
-          ports        => ROUTER_PORTS(k),
-          localx        => localx(k),
-          localy        => localy(k))
+          flow_control => '1',
+          width        => 32,
+          depth        => 4,
+          ports        =>  ROUTER_PORTS(k)
+          )
       port map (
           clk           => clk,
           rst           => rst,
@@ -272,18 +272,10 @@ begin  -- mesh
           data_e_out    => data_e_out(k),
           data_p_out    => data_p_out(k),
           data_void_out => data_void_out_i(k),
-          stop_out      => stop_out_i(k));
+          stop_out      => stop_out_i(k),
+          CONST_localx        => localx(k),
+          CONST_localy        => localy(k));
 
-    -- Monitor signals
-    mon_noc(k).clk          <= clk;
-    mon_noc(k).tile_inject  <= not data_void_in(k);
-
-    mon_noc(k).queue_full(4) <= data_void_out_i(k)(4) nand data_void_in_i(k)(4);
-    mon_noc(k).queue_full(3) <= not data_void_out_i(k)(3);
-    mon_noc(k).queue_full(2) <= not data_void_out_i(k)(2);
-    mon_noc(k).queue_full(1) <= not data_void_out_i(k)(1);
-    mon_noc(k).queue_full(0) <= not data_void_out_i(k)(0);
---    mon_noc(k).queue_full   <= (stop_out_i(k) or stop_in_i(k)) and ROUTER_PORTS(k);
   end generate routerinst;
 
 end mesh;
