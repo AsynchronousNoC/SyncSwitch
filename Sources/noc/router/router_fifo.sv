@@ -113,8 +113,10 @@ module router_fifo
   end
 
   // Read
-  assign data_out_nobypass = mem[head];  // ri lint_check_waive VAR_INDEX_RANGE
+  
 
+  assign data_out_nobypass = mem[head];  // ri lint_check_waive VAR_INDEX_RANGE
+  
   //
   // Assertions
   //

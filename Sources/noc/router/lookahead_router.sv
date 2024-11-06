@@ -179,6 +179,7 @@ module lookahead_router
     assign stop_in[g_i]=~rdreqBUFFER[g_i];
     assign data_void_outBUFFER[g_i]=~rdreqBUFFER[g_i];
     assign rdreqBUFFER[g_i]=creditsBuffer[g_i]== 1'b0  ||  empty_out[g_i]? 1'b0 : 1'b1;
+    /*
     always_ff @(posedge clk) begin
           if (rst) begin
             creditsBuffer[g_i] = noc::PortQueueDepth;
@@ -191,6 +192,16 @@ module lookahead_router
             end
           end
         end
+        */
+        always_ff @(posedge(clk)) begin
+            if (rst)
+                creditsBuffer[g_i] = noc::PortQueueDepth;
+            else begin
+                if(stop_inBUFFER[g_i]==1'b0 && data_void_outBUFFER[g_i]==1'b0) ;
+                else if(stop_inBUFFER[g_i]==1'b0 && creditsBuffer[g_i]!=2'd2) creditsBuffer[g_i]<= creditsBuffer[g_i]+1;
+                else if(data_void_outBUFFER[g_i]==1'b0 && creditsBuffer[g_i]!=2'd0) creditsBuffer[g_i] <= creditsBuffer[g_i]-1;
+            end
+        end 
         
     router_fifo
         #(
@@ -259,6 +270,7 @@ module lookahead_router
           end
         end
       end
+      
 
       assign final_routing_request[g_i] = in_valid_head[g_i] ? fifo_head[g_i].header.routing :
                                             saved_routing_request[g_i];
@@ -481,6 +493,7 @@ module lookahead_router
       end else begin : gen_data_void_out_creditbased
         assign data_void_out[g_i] = forwarding_in_progress[g_i] & no_backpressure[g_i] ?
                                     out_unvalid_flit[g_i] : 1'b1;
+        /*
         always_ff @(posedge clk) begin
           if (rst) begin
             credits[g_i] = noc::PortQueueDepth;
@@ -493,6 +506,19 @@ module lookahead_router
             end
           end
         end
+        */
+        always_ff @(posedge(clk)) begin
+            if (rst)
+                credits[g_i] = noc::PortQueueDepth;
+            else begin
+                if(stop_in[g_i]==1'b0 && data_void_out[g_i]==1'b0) ;
+                else if(stop_in[g_i]==1'b0 && credits[g_i]!=2'd2) credits[g_i]<= credits[g_i]+1;
+                else if(data_void_out[g_i]==1'b0 && credits[g_i]!=2'd0) credits[g_i] <= credits[g_i]-1;
+            end
+        end 
+        
+        
+        
       end
 
 
